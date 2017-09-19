@@ -1,0 +1,167 @@
+<project name="Shield-common" basedir="../" default="common-ref-web.jar">
+
+	<description>Shield Common</description>
+	
+	<property name="common.app.dir" value="./Shield-common" />
+	
+	<property name="common.build.dir" value="${common.app.dir}/build" />
+	
+	<property name="common.javadoc.dir" value="${common.app.dir}/javadoc" />
+	<property name="common.src.dir" value="${common.app.dir}/src" />
+	<property name="common.lib.dir" value="${common.app.dir}/lib" />
+	<property name="common.file.name" value="shield-common.jar" />
+	<property name="properties.source.dir" value="${common.src.dir}/com/o2/shield/resources/" />
+	<property name="properties.file" value="shield-common.properties" />
+	<property name="reference.web.properties.file" value="${properties.source.dir}shield-common-ref-web.properties" />
+	<property name="reference.xml.properties.file" value="${properties.source.dir}shield-common-ref-xml.properties" />
+	<property name="live.web.properties.file" value="${properties.source.dir}shield-common-live-web.properties" />
+	<property name="live.xml.properties.file" value="${properties.source.dir}shield-common-live-xml.properties" />
+	<property name="junit.testsuite.class" value="test.testsuite.JunitTestSuite"/>
+	<property name="exported.xmlrpc" value="xmlrpc-1.2-b1.jar" />
+	<property name="exported.log4j" value="log4j-1.2.8.jar"/>
+	<property name="exported.axis" value="axis.jar"/>
+	<property name="common.log.factory" value="commons-logging-1.0.2.jar"/>
+	<property name="common.discovery" value="commons-discovery-0.2.jar"/>
+	<property name="common.validator" value="commons-validator.jar"/>
+	<property name="common.collection" value="commons-collections-3.1.jar"/>
+	<property name="commons.beanutil" value="commons-beanutils.jar"/>
+	<property name="common.digester" value="commons-digester.jar"/>
+	<property name="exported.wsdl" value="wsdl4j.jar"/>
+	<property name="app.build.dir" value="./commonsjars"/>
+	
+	<!-- ==================================================== -->
+	<!-- Classpaths.                                          -->
+	<!-- ==================================================== -->
+	<path id="common.class.path">
+		<fileset dir="${common.lib.dir}">
+			<include name="*.jar"/>
+		</fileset>
+		<fileset dir="${common.build.dir}">
+			<include name="**/*"/>
+		</fileset>
+	</path>
+	
+	<target name="common.clean" description="Removes build directories">
+		<delete dir="${common.build.dir}" quiet="true"/>
+	</target>
+	
+	<!-- ================================================================= -->
+	<!-- Junit Test Class Suite.                                           -->
+	<!-- ================================================================= -->
+	<path id="common.test.classpath">
+	  <pathelement location="${common.build.dir}" />
+	  <pathelement location="${common.lib.dir}/junit-4.11.jar" />
+	  <fileset dir="${common.lib.dir}">
+		<include name="*.jar"/>
+	</fileset>
+	</path>
+	
+	<target name="test">
+		<echo message="Running JUnit Test. Please wait..."/>
+		<junit fork="yes" haltonfailure="yes" haltOnError="yes">
+		    <test name="${junit.testsuite.class}" />
+		    <formatter type="plain" usefile="false" />
+		    <classpath refid="common.test.classpath" />
+	  	</junit>
+	</target>
+
+	<!-- ==================================================== -->
+	<!-- Create necessary directories                         -->
+	<!-- ==================================================== -->
+	<target name="common.init" depends="common.clean">
+		<mkdir dir="${common.build.dir}" />		
+		<mkdir dir="${common.javadoc.dir}" />
+	</target>
+
+	<!-- ==================================================== -->
+	<!-- Compile Common                                       -->
+	<!-- ==================================================== -->
+	<target name="common.compile" depends="common.init">
+		<javac 	debug="true" deprecation="true" 
+			destdir="${common.build.dir}" srcdir="${common.src.dir}">				
+			<classpath refid="common.class.path" />
+		</javac>
+		 <copy  todir="${common.build.dir}">
+		      <fileset dir="${common.src.dir}" excludes="**/*.java"/>
+		    </copy>
+	</target>
+	
+	<!-- ===================================================== -->
+	<!-- jar common file for web interface - reference         -->
+	<!-- ===================================================== -->
+	<target name="common-ref-web.jar" depends="common.compile,test">
+		<copy file="${reference.web.properties.file}" tofile="${properties.source.dir}/${properties.file}" overwrite="true"/>
+		<copy todir="${app.build.dir}" preservelastmodified="true" overwrite="true">
+			<fileset dir="${common.lib.dir}">
+				<include name="*" />
+			</fileset>
+		</copy>		
+		<jar jarfile="${common.file.name}" basedir="${common.build.dir}" 
+				destfile="${app.build.dir}/${common.file.name}" >
+		<manifest>
+			    <attribute name="Class-Path" 
+		           	value="${common.file.name} ${exported.xmlrpc} ${exported.log4j} ${exported.axis} ${common.log.factory} ${common.discovery} ${common.validator} ${common.collection} ${commons.beanutil} ${common.digester} ${exported.wsdl}"/>
+		</manifest>   
+		</jar>  
+	</target>
+	
+	    <!-- ================================================ -->
+		<!-- jar common file for xml interface - reference    -->
+		<!-- ================================================ -->
+		<target name="common-ref-xml.jar" depends="common.compile,test">
+			<copy file="${reference.xml.properties.file}" tofile="${properties.source.dir}/${properties.file}" overwrite="true"/>
+			<copy todir="${app.build.dir}" preservelastmodified="true" overwrite="true">
+				<fileset dir="${common.lib.dir}">
+					<include name="*" />
+				</fileset>
+			</copy>		
+			<jar jarfile="${common.file.name}" basedir="${common.build.dir}" 
+					destfile="${app.build.dir}/${common.file.name}" >
+			<manifest>
+				    <attribute name="Class-Path" 
+			           	value="${common.file.name} ${exported.xmlrpc} ${exported.log4j} ${exported.axis} ${common.log.factory} ${common.discovery} ${common.validator} ${common.collection} ${commons.beanutil} ${common.digester} ${exported.wsdl}"/>
+			</manifest>   
+			</jar>  
+		</target>
+
+	
+	<!-- ===================================================== -->
+	<!-- jar common file for web interface - live              -->
+	<!-- ===================================================== -->
+		<target name="common-live-web.jar" depends="common.compile,test">			
+			<copy todir="${app.build.dir}" preservelastmodified="true" overwrite="true">
+				<fileset dir="${common.lib.dir}">
+					<include name="*" />
+				</fileset>
+			</copy>
+			<copy file="${live.web.properties.file}" tofile="${properties.source.dir}/${properties.file}" overwrite="true"/>
+			<jar jarfile="${common.file.name}" basedir="${common.build.dir}" 
+				destfile="${app.build.dir}/${common.file.name}">
+				<manifest>
+				   <attribute name="Class-Path" 
+				   	value="${common.file.name} ${exported.xmlrpc} ${exported.log4j} ${exported.axis} ${common.log.factory} ${common.discovery} ${common.validator} ${common.collection} ${commons.beanutil} ${common.digester} ${exported.wsdl}"/>
+			 	</manifest>
+			</jar>
+		</target>
+	
+	    <!-- ===================================================== -->
+		<!-- jar common file for xml interface - live              -->
+		<!-- ===================================================== -->
+			<target name="common-live-xml.jar" depends="common.compile,test" >
+				<copy todir="${app.build.dir}" preservelastmodified="true" overwrite="true">
+					<fileset dir="${common.lib.dir}">
+						<include name="*" />
+					</fileset>
+				</copy>
+				<copy file="${live.xml.properties.file}" tofile="${properties.source.dir}/${properties.file}" overwrite="true"/>								
+				<jar jarfile="${common.file.name}" basedir="${common.build.dir}" 
+					destfile="${app.build.dir}/${common.file.name}">
+					<manifest>
+					   <attribute name="Class-Path" 
+					   	value="${common.file.name} ${exported.xmlrpc} ${exported.log4j} ${exported.axis} ${common.log.factory} ${common.discovery} ${common.validator} ${common.collection} ${commons.beanutil} ${common.digester} ${exported.wsdl}"/>
+				 	</manifest>
+				</jar>
+			</target>
+
+
+</project>

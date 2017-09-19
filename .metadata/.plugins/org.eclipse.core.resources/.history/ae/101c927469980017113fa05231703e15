@@ -1,0 +1,185 @@
+package com.o2.shield.service;
+
+import java.rmi.RemoteException;
+import java.util.UUID;
+
+import javax.xml.namespace.QName;
+import javax.xml.rpc.ServiceException;
+import javax.xml.soap.SOAPElement;
+import javax.xml.soap.SOAPException;
+
+import org.apache.axis.AxisFault;
+import org.apache.axis.AxisProperties;
+import org.apache.axis.Constants;
+import org.apache.axis.client.Stub;
+import org.apache.axis.components.net.DefaultCommonsHTTPClientProperties;
+import org.apache.axis.message.SOAPHeaderElement;
+import org.apache.log4j.Logger;
+
+import uk.co.o2.soa.coredata_1.SOAFaultType;
+import uk.co.o2.soa.sendmessagedata_1.MessageType;
+import uk.co.o2.soa.sendmessagedata_1.MsisdnStatus;
+import uk.co.o2.soa.sendmessagedata_1.SendSMS;
+import uk.co.o2.soa.sendmessagedata_1.SendSMSResponse;
+import uk.co.o2.soa.sendmessageservice_1_1.SendMessageBindingStub;
+import uk.co.o2.soa.sendmessageservice_1_1.SendMessageLocator;
+import uk.co.o2.soa.subscriberdata_2.GetSubscriberProfile;
+import uk.co.o2.soa.subscriberdata_2.GetSubscriberProfileResponse;
+import uk.co.o2.soa.subscriberdata_2.SubscriberProfileType;
+import uk.co.o2.soa.subscriberservice_2.SubscriberBindingStub;
+import uk.co.o2.soa.subscriberservice_2.SubscriberServiceLocator;
+
+import com.o2.gas.conf.ShieldSystemProperties;
+
+public class ServiceHelper {
+	private static final Logger	logger	= Logger.getLogger(ServiceHelper.class);
+	
+	public ServiceHelper(){}
+	
+	private SubscriberBindingStub subscriberbindingStub;
+	private static SubscriberServiceLocator subscriberServiceLocator;
+	private SendMessageBindingStub sendMessageBindingStub;
+	private static SendMessageLocator sendMessageLocator;
+	public static final String SOA_TRANSACTION_ID = "SOATransactionID";
+	public static final String SOA_CONSUMER_ID = "SOAConsumerTransactionID";
+	public static final String NAME_SPACE = "http://soa.o2.co.uk/coredata_1";
+	
+	static {
+		try {
+			subscriberServiceLocator = new SubscriberServiceLocator();
+			subscriberServiceLocator.setSubscriberPortEndpointAddress(ShieldSystemProperties.END_POINT_URL_SUBSCRIBER);
+			subscriberServiceLocator.setEndpointAddress("SubscriberPort", ShieldSystemProperties.END_POINT_URL_SUBSCRIBER);
+						
+			sendMessageLocator = new SendMessageLocator();
+			sendMessageLocator.setSendMessagePortTypeEndpointAddress(ShieldSystemProperties.END_POINT_URL_SENDSMS);
+			sendMessageLocator.setEndpointAddress("SendMessagePortType", ShieldSystemProperties.END_POINT_URL_SENDSMS);
+			
+		} catch (ServiceException e) {
+			logger.error(e);
+		} 
+	}
+	
+	public SubscriberProfileType getSubscriberProfile (String msisdn, String operation) throws Exception{
+		String soaConsumerTranId = new String(UUID.randomUUID().toString() + ":" + "shield");
+		logger.info(String.format("[%s] SOAConsumerTransactionID for msisdn %s is : %s", operation, msisdn, soaConsumerTranId));
+		
+		subscriberbindingStub = (SubscriberBindingStub) subscriberServiceLocator.getSubscriberPort();
+		setSecurityHeader(soaConsumerTranId, subscriberbindingStub);
+		setAxisProperties();
+		return getProfile(msisdn, operation);
+	}
+	
+	private SubscriberProfileType getProfile(String msisdn, String operation) throws Exception{
+		SubscriberProfileType profile = null;
+		try {
+			GetSubscriberProfile getSubscriberProfile = new GetSubscriberProfile(msisdn);
+			Long soaRequestTime = System.currentTimeMillis();
+			GetSubscriberProfileResponse result;
+			result = subscriberbindingStub.getSubscriberProfile(getSubscriberProfile);
+			
+			Long soaOutputTime = System.currentTimeMillis();
+			String responseTime = String.valueOf(soaOutputTime - soaRequestTime);
+			logger.info(String.format("getSubscriber-%s call Completed. RESPONSE TIME: %s" ,operation, responseTime));
+			printSoaTransactionID(subscriberbindingStub, msisdn, operation);
+			
+			profile = result.getSubscriberProfile();
+			
+		} catch (SOAFaultType e) {
+			logger.error("Error maps cleanly to a SOAP Falut: " +e.getFaultReason());
+			throw e;
+		} catch (RemoteException e) {
+			logger.error("Remote connection issue : "+e.getMessage());
+			throw e;
+		}
+		return profile;
+	}
+	
+	public void sendSMS(String msisdn, String message, String operation) throws Exception{
+		String soaConsumerTranId = new String(UUID.randomUUID().toString() + ":" + "shield");
+		logger.info(String.format("[%s] SOAConsumerTransactionID for msisdn %s is : %s", operation, msisdn, soaConsumerTranId));
+		
+		sendMessageBindingStub = (SendMessageBindingStub) sendMessageLocator.getSendMessagePortType();
+		setSecurityHeader(soaConsumerTranId, sendMessageBindingStub);	
+		setAxisProperties();
+		sendMessage(msisdn, message, operation);
+	}
+	
+	private void sendMessage(String msisdn, String message, String operation) throws Exception {
+
+		logger.info(String.format("Message to be send is: %s", message));
+
+		try {
+			SendSMS sendSMS = new SendSMS();
+			sendSMS.setMtProfile(ShieldSystemProperties.MT_PROFILE);
+			sendSMS.setMessage(message);
+			sendSMS.setMessageType(MessageType.TXT);
+			sendSMS.setMsisdnList(new String[] { msisdn });
+			sendSMS.setTtl(ShieldSystemProperties.TIME_TO_LIVE);
+
+			Long soaRequestTime = System.currentTimeMillis();
+			SendSMSResponse response = sendMessageBindingStub.sendSMS(sendSMS);
+			Long soaOutputTime = System.currentTimeMillis();
+
+			String responseTime = String.valueOf(soaOutputTime - soaRequestTime);
+			logger.info("SOA SendSMS call Completed. RESPONSE TIME: "+ responseTime);
+			printSoaTransactionID(sendMessageBindingStub, msisdn, operation);
+
+			MsisdnStatus statusList[] = response.getResult().getMessageReceipt();
+			MsisdnStatus msisdnStatus = statusList[0];
+			String status = msisdnStatus.getStatus();
+			String transactionId = response.getResult().getTransactionId();
+			String drescription =  response.getResult().getStatusDescription();
+			logger.info(String.format("SendSMS status for Msisdn %s is %s. Description : %s , TransactionID: %s",msisdn, status,drescription,transactionId));
+		} catch (SOAFaultType e) {
+			logger.error("Error maps cleanly to a SOAP Falut: "	+ e.getFaultReason());
+			throw e;
+		} catch (RemoteException e) {
+			logger.error("Remote connection issue: " + e.getMessage());
+			throw e;
+		}
+	}
+	
+	private void printSoaTransactionID(Stub binding, String msisdn ,String operation) throws AxisFault{
+		
+		SOAPHeaderElement responseHeader = binding.getResponseHeader(NAME_SPACE, SOA_TRANSACTION_ID);		
+		if(null !=responseHeader){
+			String soaTranId = null;
+			try {
+				if(null != responseHeader.getValueAsType(Constants.XSD_STRING)){
+					soaTranId = (String)responseHeader.getValueAsType(Constants.XSD_STRING);
+					logger.info(String.format("[%s] SOATransactionID for msisdn %s is %s",operation, msisdn, soaTranId));
+				}
+			} catch (Exception e) {
+				throw AxisFault.makeFault(e);			
+			}			
+		} else{
+			logger.info(String.format("No Responseheader was found for operation [%s] for msisdn: %s", operation, msisdn));
+		}		
+	}
+	
+	private void setSecurityHeader(String soaConsumerTranId, Stub bindingStub) throws SOAPException {
+		QName headerName = new QName("http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd", "Security");
+		SOAPHeaderElement header = new SOAPHeaderElement(headerName);
+		header.setActor(null);
+		header.setPrefix("wsse");
+		header.setMustUnderstand(true);
+
+		SOAPElement utElem = header.addChildElement("UsernameToken");
+		SOAPElement userNameElem = utElem.addChildElement("Username");
+		userNameElem.setValue(ShieldSystemProperties.ACCESS_ACCOUNT);
+		SOAPElement passwordElem = utElem.addChildElement("Password");
+		passwordElem.setValue(ShieldSystemProperties.ACCESS_PASSPHRASE);
+
+		bindingStub.setHeader(header);
+		bindingStub.setHeader(NAME_SPACE, SOA_CONSUMER_ID, soaConsumerTranId);
+	}
+	
+	private void setAxisProperties(){
+		AxisProperties.setProperty("axis.socketSecureFactory", ShieldSocketSecureFactory.class.getName());
+		AxisProperties.setProperty(DefaultCommonsHTTPClientProperties.MAXIMUM_TOTAL_CONNECTIONS_PROPERTY_KEY, ShieldSystemProperties.NUMBER_OF_POOL_CONNECTION);
+		AxisProperties.setProperty(DefaultCommonsHTTPClientProperties.CONNECTION_DEFAULT_CONNECTION_TIMEOUT_KEY,ShieldSystemProperties.REQUEST_TIME_OUT );
+		AxisProperties.setProperty(DefaultCommonsHTTPClientProperties.CONNECTION_POOL_TIMEOUT_KEY, ShieldSystemProperties.POOL_CONNECTION_TIME_OUT);
+		AxisProperties.setProperty(DefaultCommonsHTTPClientProperties.CONNECTION_DEFAULT_SO_TIMEOUT_KEY, ShieldSystemProperties.READ_TIME_OUT);
+		System.setProperty("javax.net.debug", ShieldSystemProperties.DEBUG_OPTION);		
+	}
+}

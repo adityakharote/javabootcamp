@@ -1,0 +1,130 @@
+<project name="shield_build" basedir="." default="compile.webapp">
+    <import file="build.xml"/>
+    
+	<property name="prop.shield.file" value="shield.properties" />
+	<property name="prop.log4j.file" value="log4j.properties" />
+    
+    <!-- Properties for reference environment -->
+	<property name="war.ref.web.file" value="shield_ref_web.war" />
+	<property name="war.ref.xml.file" value="shield_ref_xml.war" />
+	<property name="prop.ref.web.log4j.file" value="log4j_ref_web.properties" />
+	<property name="prop.ref.xml.log4j.file" value="log4j_ref_xml.properties" />
+	<property name="prop.ref.web.shield.file" value="shield_ref_web.properties" />
+	<property name="prop.ref.xml.shield.file" value="shield_ref_xml.properties" />
+    
+    <!-- Properties for live environment -->
+	<property name="war.live.web.file" value="shield_live_web.war" />
+	<property name="war.live.xml.file" value="shield_live_xml.war" />
+	<property name="prop.live.web.log4j.file" value="log4j_live_web.properties" />
+	<property name="prop.live.xml.log4j.file" value="log4j_live_xml.properties" />
+	<property name="prop.live.web.shield.file" value="shield_live_web.properties" />
+	<property name="prop.live.xml.shield.file" value="shield_live_xml.properties" />
+    
+    <property name="temp.dir.fileimport" value="${dist.dir}/temp_fileimport" />
+    
+	<!-- =================================================================== -->
+	<!-- Rename property files for web application in reference environment  -->
+	<!-- =================================================================== -->
+	<target name="rename.ref.web" depends="prepare">
+        <move file="${classes.dir}/${prop.ref.web.log4j.file}" tofile="${classes.dir}/${prop.log4j.file}" />
+        <move file="${classes.dir}/${prop.ref.web.shield.file}" tofile="${classes.dir}/${prop.shield.file}" />
+	</target>
+    
+	<!-- =================================================================== -->
+	<!-- Rename property files for web application in live environment       -->
+	<!-- =================================================================== -->
+	<target name="rename.live.web" depends="prepare">
+        <move file="${classes.dir}/${prop.live.web.log4j.file}" tofile="${classes.dir}/${prop.log4j.file}" />
+        <move file="${classes.dir}/${prop.live.web.shield.file}" tofile="${classes.dir}/${prop.shield.file}" />
+	</target>
+    
+	<!-- =================================================================== -->
+	<!-- Rename property files for xml application in reference environment  -->
+	<!-- =================================================================== -->
+	<target name="rename.ref.xml" depends="prepare">
+        <move file="${classes.dir}/${prop.ref.xml.log4j.file}" tofile="${classes.dir}/${prop.log4j.file}" />
+        <move file="${classes.dir}/${prop.ref.xml.shield.file}" tofile="${classes.dir}/${prop.shield.file}" />
+	</target>
+    
+	<!-- =================================================================== -->
+	<!-- Rename property files for xml application in live environment       -->
+	<!-- =================================================================== -->
+	<target name="rename.live.xml" depends="prepare">
+        <move file="${classes.dir}/${prop.live.xml.log4j.file}" tofile="${classes.dir}/${prop.log4j.file}" />
+        <move file="${classes.dir}/${prop.live.xml.shield.file}" tofile="${classes.dir}/${prop.shield.file}" />
+	</target>
+    
+	<!-- =================================================================== -->
+	<!-- web application war file for reference environment                  -->
+	<!-- =================================================================== -->
+	<target name="war.ref.web" depends="clean,init,prepare,compile.webapp,test,rename.ref.web">
+		<jar jarfile="${war.ref.web.file}" basedir="${webapp.dir}" destfile="${dist.dir}/${war.ref.web.file}" />
+	</target>
+    
+	<!-- =================================================================== -->
+	<!-- web application war file for live environment                       -->
+	<!-- =================================================================== -->
+	<target name="war.live.web" depends="clean,init,prepare,compile.webapp,test,rename.live.web">
+		<jar jarfile="${war.live.web.file}" basedir="${webapp.dir}" destfile="${dist.dir}/${war.live.web.file}" />
+	</target>
+    
+	<!-- =================================================================== -->
+	<!-- XML RPC application war file for reference environment              -->
+	<!-- =================================================================== -->
+	<target name="war.ref.xml" depends="clean,init,prepare,compile.webapp,test,rename.ref.xml">
+		<jar jarfile="${war.ref.xml.file}" basedir="${webapp.dir}" destfile="${dist.dir}/${war.ref.xml.file}" />
+	</target>
+    
+	<!-- =================================================================== -->
+	<!-- XML RPC application war file for live environment                   -->
+	<!-- =================================================================== -->
+	<target name="war.live.xml" depends="clean,init,prepare,compile.webapp,rename.live.xml">
+		<jar jarfile="${war.live.xml.file}" basedir="${webapp.dir}" destfile="${dist.dir}/${war.live.xml.file}" />
+	</target>
+    
+	<!-- =================================================================== -->
+	<!-- Creates Importer's jar File for reference environment               -->
+	<!-- =================================================================== -->
+	<target name="fileImporter_ref.jar" depends="clean,init,prepare,test,compile.webapp, rename.ref.web">
+        <mkdir dir="${temp.dir.fileimport}"/>
+        
+        <copy todir="${temp.dir.fileimport}" preservelastmodified="true">
+            <fileset dir="${classes.dir}">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
+        
+        <unjar src="${lib.dir}/xmlrpc-1.2-b1.jar" dest="${temp.dir.fileimport}"></unjar>
+        <unjar src="${lib.dir}/log4j-1.2.8.jar" dest="${temp.dir.fileimport}"></unjar>
+        
+		<jar destfile="${dist.dir}/fileImport_ref.jar" basedir="${temp.dir.fileimport}">
+			<manifest>
+				<attribute name="Main-Class" value="com.o2.shield.fileimport.FileImporter" />
+			</manifest>
+		</jar>
+		<delete dir="${temp.dir.fileimport}"></delete>
+	</target>
+    
+	<!-- =================================================================== -->
+	<!-- Creates Importer's jar File for live environment                    -->
+	<!-- =================================================================== -->
+	<target name="fileImporter_live.jar" depends="clean,init,prepare,test,compile.webapp, rename.live.web">
+        <mkdir dir="${temp.dir.fileimport}"/>
+        
+        <copy todir="${temp.dir.fileimport}" preservelastmodified="true">
+            <fileset dir="${classes.dir}">
+                <include name="**/*"/>
+            </fileset>
+        </copy>
+        
+        <unjar src="${lib.dir}/xmlrpc-1.2-b1.jar" dest="${temp.dir.fileimport}"></unjar>
+        <unjar src="${lib.dir}/log4j-1.2.8.jar" dest="${temp.dir.fileimport}"></unjar>
+        
+		<jar destfile="${dist.dir}/fileImport_live.jar" basedir="${temp.dir.fileimport}">
+			<manifest>
+				<attribute name="Main-Class" value="com.o2.shield.fileimport.FileImporter" />
+			</manifest>
+		</jar>
+		<delete dir="${temp.dir.fileimport}"></delete>
+	</target>
+</project>

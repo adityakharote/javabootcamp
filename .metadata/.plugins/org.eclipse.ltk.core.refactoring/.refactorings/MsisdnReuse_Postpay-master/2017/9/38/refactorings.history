@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<session version="1.0">
+<refactoring comment="Move &apos;administration&apos; to &apos;o2&apos;" description="Move &apos;administration&apos; to &apos;o2&apos;" destination="CDP/src/main/java/uk/co/o2" element1="CDP/src/main/java/uk/co/o2/msisdnreuse/administration" flags="7" id="org.eclipse.ltk.core.refactoring.move.resources" resources="1" stamp="1505812985877" updateReferences="true"/>
+</session>

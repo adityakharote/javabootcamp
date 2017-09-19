@@ -1,0 +1,17 @@
+#Live properties for web interface
+soaAGusername=shield_9876
+soaAGpassphrase=cesKaph7wreJuBA
+subscriber_endPointUrl=https://sdpapi.o2.co.uk/services/Subscriber_2_0
+sendSms_endPoingUrl=https://sdpapi.o2.co.uk/services/SendMessage_1_1
+debugOption=ssl
+keyStore=/usr/o2/wlapp/wlappDomain_10/keystore/o2_shield_live.jks
+keyStorePassword=shield!
+trustedStore=/usr/o2/wlapp/wlappDomain_10/keystore/o2_shield_live.jks
+trustStorePassword=shield!
+protocol=TLSv1
+requestTimeOut=8000
+readTimeOut=8000
+poolConnectTimeOut=2000
+poolCount=50
+mtProfile=o2/shield/live
+ttl=6000

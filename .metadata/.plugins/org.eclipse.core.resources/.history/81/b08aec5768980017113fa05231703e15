@@ -1,0 +1,17 @@
+#Ref properties for web interface
+soaAGusername=shield_9876
+soaAGpassphrase=4ReJDH3r
+subscriber_endPointUrl=https://sdpapi.ref.o2.co.uk/services/Subscriber_2_0
+sendSms_endPoingUrl=https://sdpapi.ref.o2.co.uk/services/SendMessage_1_1
+debugOption=ssl,handshake
+keyStore=/usr/o2/wlapp/wlappDomain/keystore/o2_shield_ref.jks
+keyStorePassword=shield
+trustedStore=/usr/o2/wlapp/wlappDomain/keystore/o2_shield_ref.jks
+trustStorePassword=shield
+protocol=TLSv1
+requestTimeOut=8000
+readTimeOut=8000
+poolConnectTimeOut=2000
+poolCount=50
+mtProfile=o2/shield/ref
+ttl=6000
